@@ -6,9 +6,11 @@ from bs4 import BeautifulSoup as bs
 import re
 import os
 from datetime import datetime
+import shutil
 
 # https://www.moxfield.com/users/Hype/decks/public
 
+# Scrape a moxfield profile for public decks and retrieve deck lists for each found
 def UpdateCurrentDecks(profile_url):
     # if the user only entered their username, turn it into their profile url
     if (profile_url[0:8] != "https://"):
@@ -85,3 +87,17 @@ def UpdateCurrentDecks(profile_url):
 
     # Close the browser
     browser.quit()
+
+# Keep a copy of the current decks to use as reference in the future    
+def SaveDecks():
+    source_dir = r"{0}\\Decks".format(os.getcwd())
+    destination_dir = r"{0}\\SavedDecks".format(os.getcwd())
+    shutil.copytree(source_dir, destination_dir)
+    
+# Find all changes made to specific deck since last save created    
+def CompareDecks(deck_title):
+    return
+
+# Find all changes made to all decks since last save created
+def CompareAllDecks():
+    return

@@ -6,8 +6,9 @@ from urllib.request import urlopen
 import time as t
 import string
 
-# Check whether the specified path exists or not
+# Retrieve a single card image from scryfall's api
 def GetCardImage(card_name):
+    # Check whether the specified path exists or not
     path = os.getcwd() + "\\Images"
     if not os.path.exists(path):
 
@@ -55,7 +56,7 @@ def GetCardImage(card_name):
     else:
         print('Image Couldn\'t be retrieved')
     
-
+# Retrieve an entire deck's images from scryfall's api
 def GetDeckImages(deck_title):
     path = os.getcwd() + "\\Decks\\" + deck_title
     
@@ -66,6 +67,7 @@ def GetDeckImages(deck_title):
     
     print(deck_title + " found!")
     
+    # Read each line of the text file and extract the card names only
     with open(path + ".txt") as f:
         for i, line in enumerate(f):
             if i < 3:  # Skip the first 3 lines

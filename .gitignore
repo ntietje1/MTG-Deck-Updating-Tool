@@ -1,3 +1,5 @@
 Decks/
+SavedDecks/
 Images/
 __pycache__
+*.pyc

@@ -5,8 +5,8 @@ def main():
     profile = "Hype"
     #fd.UpdateCurrentDecks(profile)
     #fi.GetCardImage("Burgeoning")
-    fi.GetDeckImages("Heads I Win Tails You Lose")
-    
+    #fi.GetDeckImages("Heads I Win Tails You Lose")
+    fd.SaveDecks()
     
 if __name__ == "__main__":
     main()
