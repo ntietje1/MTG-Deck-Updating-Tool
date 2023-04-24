@@ -3,3 +3,4 @@ SavedDecks/
 Images/
 __pycache__
 *.pyc
+geckodriver.log

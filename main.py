@@ -6,7 +6,9 @@ def main():
     #fd.UpdateCurrentDecks(profile)
     #fi.GetCardImage("Burgeoning")
     #fi.GetDeckImages("Heads I Win Tails You Lose")
-    fd.SaveDecks()
+    #fd.SaveDecks()
+    #fd.CompareDecks("Heads I Win Tails You Lose")
+    fd.CompareAllDecks()
     
 if __name__ == "__main__":
     main()

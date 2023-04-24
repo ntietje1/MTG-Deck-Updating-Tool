@@ -8,7 +8,22 @@ import os
 from datetime import datetime
 import shutil
 
-# https://www.moxfield.com/users/Hype/decks/public
+# Convert text file into a dictionary with card names as keys and quantity as value
+def MakeCardDict(text_path):
+    CardDict = {}
+    with open(text_path, 'r') as file:
+        for i, line in enumerate(file):
+                # Get the quantity and the name of each card
+                colon_index = line.find(':')
+                if colon_index != -1:
+                    # Add the card to the dictionary
+                    cardName = line[:colon_index]
+                    cardQuantity = int(line[colon_index+1:].strip())
+                    CardDict[cardName] = cardQuantity
+                    #print("Added " + cardName + " to dictionary!")
+    
+    return CardDict
+    
 
 # Scrape a moxfield profile for public decks and retrieve deck lists for each found
 def UpdateCurrentDecks(profile_url):
@@ -58,9 +73,9 @@ def UpdateCurrentDecks(profile_url):
     for deck in decks:
         f = open(path + "\\" + deck[0] + ".txt", "w+")
         print("Opened " + deck[0] + ".txt")
-        f.write(deck[0] + "\n")
-        f.write(deck[1] + "\n")
-        f.write("Retrieved on: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S") + "\n")
+        #f.write(deck[0] + "\n")
+        #f.write(deck[1] + "\n")
+        #f.write("Retrieved on: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S") + "\n")
         
         url = deck[1]
         browser.get(url)
@@ -78,7 +93,7 @@ def UpdateCurrentDecks(profile_url):
         count = 0
         for match in matches:
             card_amount, card_name = match
-            f.write(card_amount + " " + card_name + "\n")
+            f.write(card_name + ":" + card_amount + "\n")
             count = count + int(card_amount)
         print("Successfully added " + str(count) + " cards!")
         
@@ -90,14 +105,47 @@ def UpdateCurrentDecks(profile_url):
 
 # Keep a copy of the current decks to use as reference in the future    
 def SaveDecks():
-    source_dir = r"{0}\\Decks".format(os.getcwd())
-    destination_dir = r"{0}\\SavedDecks".format(os.getcwd())
+    # Delete existing save if there is one
+    path = os.getcwd() + "\\SavedDecks"
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    
+    # Copy over current decks    
+    source_dir = os.getcwd() + "\\Decks"
+    destination_dir = os.getcwd() + "\\SavedDecks"
     shutil.copytree(source_dir, destination_dir)
     
 # Find all changes made to specific deck since last save created    
-def CompareDecks(deck_title):
-    return
+def CompareDecks(fileName):
+    # Check whether the specified path exists or not
+    path1 = os.getcwd() + "\\Decks\\" + fileName
+    path2 = os.getcwd() + "\\SavedDecks\\" + fileName
+    if not os.path.exists(path1): 
+        print("Deck not found in current decks!")
+        return
+    if not os.path.exists(path2):
+        print("Deck not found in saved decks!")
+        saved_deck = {}
+    else:
+        saved_deck = MakeCardDict("SavedDecks\\" + fileName)
+    
+    # Convert text files into dictionaries
+    current_deck = MakeCardDict("Decks\\" + fileName)
+    
+    # Find differences in the dictionaries
+    diff_dict = {k: current_deck.get(k, 0) - saved_deck.get(k, 0) for k in set(saved_deck) | set(current_deck)}
+    
+    # Create a new dictionary with only the non-zero entries
+    diff_dict_no_zeros = {k: v for k, v in diff_dict.items() if v != 0}
+    
+    print("Changes made to " + fileName + " found:")
+    print(diff_dict_no_zeros)
+    
+    return diff_dict_no_zeros
+                    
 
 # Find all changes made to all decks since last save created
 def CompareAllDecks():
-    return
+    for deck_title in os.listdir("Decks//"):
+        if deck_title.endswith('.txt'):
+            diff_dict = CompareDecks(deck_title)

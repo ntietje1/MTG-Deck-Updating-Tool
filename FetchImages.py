@@ -70,13 +70,11 @@ def GetDeckImages(deck_title):
     # Read each line of the text file and extract the card names only
     with open(path + ".txt") as f:
         for i, line in enumerate(f):
-            if i < 3:  # Skip the first 3 lines
-                continue
             # Strip the card quantity and the \n character from each line
-            first_space_index = line.find(' ')
-            if first_space_index != -1:
-                cardName = line[first_space_index+1:].strip()
-                GetCardImage(cardName)
+            colon_index = line.find(':')
+            if colon_index != -1:
+                card_name = line[:colon_index]
+                GetCardImage(card_name)
                 t.sleep(0.1)
         
 
