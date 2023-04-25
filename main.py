@@ -9,7 +9,7 @@ def main():
     #fi.GetDeckImages("Henzie and Umori Companion")
     #fd.SaveDecks()
     #fd.CompareDecks("Henzie and Umori Companion.txt")
-    fi.GetAllImages()
+    #fi.GetAllImages()
     card_dict = fd.CompareAllDecks()
     print("Full changes made: ")
     print(card_dict)

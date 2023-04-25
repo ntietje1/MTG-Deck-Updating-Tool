@@ -32,15 +32,9 @@ def GetCardImage(card_name):
     json_data = json.loads(response.read())
     
     # Retrieve the url to the card png
-    # TODO: FIX DOUBLE FACED CARDS!!!
-    # https://api.scryfall.com/cards/named?fuzzy=Etali-Primal-Conqueror--Etali-Primal-Sickness
-    
-    # Check if the "card_faces" field is present in the data
-    # If so, split card name and get 2 image urls
     image_urls = []
-    
-    if json_data['layout'] in ["modal_dfc", "transform"]:
-        for i in range (0,2):
+    if json_data['layout'] in ["modal_dfc", "transform"]: # Check if the card is dual faced
+        for i in range (0,2): # Split card name and get 2 image urls
             image_urls.append(json_data['card_faces'][i]['image_uris']['png'])
             split_index = formattedCardName.find("--")
             formattedCardNames = [formattedCardName[:split_index], formattedCardName[split_index+2:]]

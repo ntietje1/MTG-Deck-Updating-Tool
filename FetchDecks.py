@@ -10,17 +10,18 @@ import shutil
 import Utils as u
 
 # Scrape a moxfield profile for public decks and retrieve deck lists for each found
+# Saves the deck lists into text files in the /Decks directory
 def UpdateCurrentDecks(profile_url):
     # if the user only entered their username, turn it into their profile url
     if (profile_url[0:8] != "https://"):
         profile_url = "https://www.moxfield.com/users/" + profile_url + "/decks/public"
 
     # Check whether the specified path exists or not
-    path = os.getcwd() + "\\Decks"
-    if not os.path.exists(path):
+    deck_path = os.getcwd() + "\\Decks"
+    if not os.path.exists(deck_path):
 
         # Create a new directory because it does not exist
-        os.makedirs(path)
+        os.makedirs(deck_path)
         print("New deck directory created!")
 
     # Disable the browser window opening
@@ -55,11 +56,8 @@ def UpdateCurrentDecks(profile_url):
 
     # For every deck found, grab all cards and write to the text file       
     for deck in decks:
-        f = open(path + "\\" + deck[0] + ".txt", "w+")
+        f = open(deck_path + "\\" + deck[0] + ".txt", "w+")
         print("Opened " + deck[0] + ".txt")
-        #f.write(deck[0] + "\n")
-        #f.write(deck[1] + "\n")
-        #f.write("Retrieved on: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S") + "\n")
         
         url = deck[1]
         browser.get(url)
@@ -86,20 +84,28 @@ def UpdateCurrentDecks(profile_url):
 
     # Close the browser
     browser.quit()
+    return
 
 # Keep a copy of the current decks to use as reference in the future    
+# Copies over all deck lists into the /SavedDecks directory
 def SaveDecks():
     # Delete existing save if there is one
-    path = os.getcwd() + "\\SavedDecks"
-    if os.path.exists(path):
-        shutil.rmtree(path)
+    saved_path = os.getcwd() + "\\SavedDecks"
+    if os.path.exists(saved_path):
+        shutil.rmtree(saved_path)
     
     # Copy over current decks    
     source_dir = os.getcwd() + "\\Decks"
     destination_dir = os.getcwd() + "\\SavedDecks"
     shutil.copytree(source_dir, destination_dir)
     
+    # Create log file to track when save was created
+    f = open(saved_path + "\\log.txt", "w+")
+    f.write("Retrieved on: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S") + "\n")
+    return
+    
 # Find all changes made to specific deck since last save created    
+# Returns a dictionary of card names and quantities
 def CompareDecks(fileName):
     # Check whether the specified path exists or not
     path1 = os.getcwd() + "\\Decks\\" + fileName
@@ -128,7 +134,8 @@ def CompareDecks(fileName):
     return diff_dict_no_zeros
                     
 
-# Find all changes made to all decks since last save created
+# Compare the contents of the /Decks and /SavedDecks directories
+# Returns a dictionary of card names and quantities
 def CompareAllDecks():
     full_diff_dict = {}
     for deck_title in os.listdir("Decks//"):

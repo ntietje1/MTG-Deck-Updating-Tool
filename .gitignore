@@ -1,6 +1,7 @@
 Decks/
 SavedDecks/
 Images/
+PDFs/
 __pycache__
 *.pyc
 geckodriver.log
