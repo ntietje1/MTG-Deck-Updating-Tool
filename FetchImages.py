@@ -81,11 +81,13 @@ def GetDeckImages(deck_title):
                 GetCardImage(card_name)
                 t.sleep(0.1)
                 
-# Retrieve all deck's images from scryfall's api
-def GetAllImages():
-    for deck_title in os.listdir("Decks//"):
-        if deck_title.endswith('.txt'):
-            GetDeckImages(deck_title)
+# Retrieve all images for a dictionary of cards from scryfall's api
+def GetAllImages(card_dict):
+    for card_name, card_quantity in card_dict.items():
+        if card_quantity > 0:
+            GetCardImage(card_name)
+            
+
             
         
 
