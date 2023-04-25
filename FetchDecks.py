@@ -7,23 +7,7 @@ import re
 import os
 from datetime import datetime
 import shutil
-
-# Convert text file into a dictionary with card names as keys and quantity as value
-def MakeCardDict(text_path):
-    CardDict = {}
-    with open(text_path, 'r') as file:
-        for i, line in enumerate(file):
-                # Get the quantity and the name of each card
-                colon_index = line.find(':')
-                if colon_index != -1:
-                    # Add the card to the dictionary
-                    cardName = line[:colon_index]
-                    cardQuantity = int(line[colon_index+1:].strip())
-                    CardDict[cardName] = cardQuantity
-                    #print("Added " + cardName + " to dictionary!")
-    
-    return CardDict
-    
+import Utils as u
 
 # Scrape a moxfield profile for public decks and retrieve deck lists for each found
 def UpdateCurrentDecks(profile_url):
@@ -127,10 +111,10 @@ def CompareDecks(fileName):
         print("Deck not found in saved decks!")
         saved_deck = {}
     else:
-        saved_deck = MakeCardDict("SavedDecks\\" + fileName)
+        saved_deck = u.MakeCardDict("SavedDecks\\" + fileName)
     
     # Convert text files into dictionaries
-    current_deck = MakeCardDict("Decks\\" + fileName)
+    current_deck = u.MakeCardDict("Decks\\" + fileName)
     
     # Find differences in the dictionaries
     diff_dict = {k: current_deck.get(k, 0) - saved_deck.get(k, 0) for k in set(saved_deck) | set(current_deck)}
@@ -146,6 +130,11 @@ def CompareDecks(fileName):
 
 # Find all changes made to all decks since last save created
 def CompareAllDecks():
+    full_diff_dict = {}
     for deck_title in os.listdir("Decks//"):
         if deck_title.endswith('.txt'):
             diff_dict = CompareDecks(deck_title)
+            full_diff_dict.update(diff_dict)
+            # print("FULL CHANGES MADE:")
+            # print(full_diff_dict)
+    return full_diff_dict
