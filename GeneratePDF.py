@@ -3,6 +3,10 @@ import fitz
 import Utils as u
 from datetime import datetime
 
+# Returns the path of a generated pdf if one were to be generated
+def getPDFPath():
+    return os.getcwd() + "\\PDFs\\deck-" + datetime.now().strftime("%d-%m-%Y") + ".pdf"
+
 # Generate a pdf with card images true to size
 # Saves the pdf to the /PDFs directory
 def genPDF(card_dict):

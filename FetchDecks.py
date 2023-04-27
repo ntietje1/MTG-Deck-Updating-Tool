@@ -101,7 +101,7 @@ def SaveDecks():
     
     # Create log file to track when save was created
     f = open(saved_path + "\\log.txt", "w+")
-    f.write("Retrieved on: " + datetime.now().strftime("%d/%m/%Y %H:%M:%S") + "\n")
+    f.write("Retrieved on: " + datetime.now().strftime("%m/%d/%Y %H:%M:%S") + "\n")
     return
     
 # Find all changes made to specific deck since last save created    
@@ -145,3 +145,29 @@ def CompareAllDecks():
             # print("FULL CHANGES MADE:")
             # print(full_diff_dict)
     return full_diff_dict
+
+def LastSavedDate():
+    # Get the path to the log file
+    log_file_path = os.path.join(os.getcwd(), "SavedDecks", "log.txt")
+    
+    # Check if the log file exists
+    if not os.path.exists(log_file_path):
+        return "no log file found!"
+    
+    # Open the log file in read mode
+    with open(log_file_path, "r") as log_file:
+        # Read the lines of the file into a list
+        lines = log_file.readlines()
+        
+        # Get the last line of the file
+        last_line = lines[-1].strip()
+        
+        # Extract the date from the last line using a regular expression
+        date_pattern = r"Retrieved on: (\d{2}/\d{2}/\d{4})"
+        match = re.search(date_pattern, last_line)
+        
+        # If a match is found, return the date
+        if match:
+            return match.group(1)
+        else:
+            return None
