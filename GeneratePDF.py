@@ -1,6 +1,6 @@
 import os
 import fitz
-import Utils as u
+import FetchImages as fi
 from datetime import datetime
 
 # Returns the path of a generated pdf if one were to be generated
@@ -27,8 +27,7 @@ def genPDF(card_dict):
     
     # Convert cards hashmap into a list of cards to print
     num_cards_added = 0
-    added_cards = []
-    removed_cards_dict = {}
+    added_cards = [] # create a list of added cards (multiple cards added as duplicates)
     for card_name, card_quantity in card_dict.items():
         if card_quantity > 0:
             for i in range(card_quantity):
@@ -44,7 +43,7 @@ def genPDF(card_dict):
         return
     
     # Create a blank pdf
-    pdf_path = os.getcwd() + "\\PDFs\\deck-" + datetime.now().strftime("%d-%m-%Y") + ".pdf"
+    pdf_path = os.getcwd() + "\\PDFs\\deck-" + datetime.now().strftime("%m-%d-%Y") + ".pdf"
     deck_pdf = fitz.open()
 
     # Loop over each card image and add it to the blank pdf
@@ -54,22 +53,16 @@ def genPDF(card_dict):
             page = deck_pdf.new_page(width = page_width_pixels, height = page_height_pixels)
             j = 0
         
-        # Convert png file to pdf
-        formattedCardName = u.FormatCardName(card_name)
+        # Determine file paths for card images
+        formattedCardName = fi.FormatCardName(card_name)
+        if "--" in formattedCardName:
+            formattedCardNames = fi.splitCardName(card_name)[0] # Split any dual faced cards
+            formattedCardName = formattedCardNames[0]
+            if len(formattedCardNames) > 1:
+                added_cards.append(formattedCardNames[1]) 
+        
         img_path = os.getcwd() + "\\Images\\" + formattedCardName + ".png"
-        # Check if the image has been downloaded
-        if not os.path.exists(img_path):
-            print("Found card whose image is not downloaded, attempting to split")
-            # Try splitting the card name (for dual faced cards)
-            split_index = formattedCardName.find("--")
-            # If the card is dual faced, fix card name to that of the front face and add back face to list of cards to be added
-            if split_index != -1 and os.path.exists(os.getcwd() + "\\Images\\" + formattedCardName[:split_index] + ".png"):
-                print("split successful!" + formattedCardName[:split_index] + " " + formattedCardName[split_index+2:])
-                added_cards.append(formattedCardName[split_index+2:])
-                formattedCardName = formattedCardName[:split_index]
-                img_path = os.getcwd() + "\\Images\\" + formattedCardName + ".png"
-            else:
-                return
+        
         # Convert the png to pdf
         card_image = fitz.open(img_path)
         pdfbytes = card_image.convert_to_pdf()
@@ -92,8 +85,6 @@ def genPDF(card_dict):
     
     # Save the generated pdf    
     deck_pdf.save(pdf_path)
-    for card_name, card_quantity in removed_cards_dict.items():
-        print("REMOVE: " + card_name + " " + str(card_quantity) + "x")
         
         
 

@@ -5,21 +5,20 @@ import json
 from urllib.request import urlopen
 import time as t
 import string
-import Utils as u
 
-# Retrieve a single card image from scryfall's api
-def GetCardImage(card_name):
-    # Check whether the specified path exists or not
-    path = os.getcwd() + "\\Images"
-    if not os.path.exists(path):
-        # Create a new directory because it does not exist
-        os.makedirs(path)
-        print("New image directory created!")
-        
-    formattedCardName = u.FormatCardName(card_name)
-    if os.path.exists(path + "\\" + formattedCardName + ".png"):
-        print(card_name + ".png already downloaded! Using existing png")
-        return 
+# Fix bad file names
+def FormatCardName(card_name):
+    formattedCardName = card_name.replace("\"", "") # Replace slashes
+    formattedCardName = card_name.replace("/", "") # Replace slashes
+    formattedCardName = formattedCardName.replace(" ", "-") # Replace spaces 
+    formattedCardName = formattedCardName.replace(",", "") # Delete commas
+    formattedCardName = formattedCardName.replace("\"", "") # Delete quotes
+    formattedCardName = formattedCardName.replace("\'", "") # Delete quotes
+    formattedCardName = formattedCardName.lower()
+    return formattedCardName
+
+def splitCardName(card_name):
+    formattedCardName = FormatCardName(card_name)
     
     # Set up the image URL and filename
     json_url = "https://api.scryfall.com/cards/named?fuzzy={0}".format(formattedCardName)
@@ -41,6 +40,29 @@ def GetCardImage(card_name):
     else:
         image_urls.append(json_data['image_uris']['png'])
         formattedCardNames = [formattedCardName]
+    
+    return (formattedCardNames, image_urls)
+
+# Retrieve a single card image from scryfall's api
+def GetCardImage(card_name):
+    # Check whether the specified path exists or not
+    path = os.getcwd() + "\\Images"
+    if not os.path.exists(path):
+        # Create a new directory because it does not exist
+        os.makedirs(path)
+        print("New image directory created!")
+        
+    # Split dual faced cards and retrieve all image urls as lists
+    retrieved_data = splitCardName(card_name)
+    formattedCardNames = retrieved_data[0]
+    image_urls = retrieved_data[1]
+    
+    # Check if the image/images have already been downloaded
+    # This might not work if one half of a dual faced card was downloaded (probably won't happen)
+    for f_card_name in formattedCardNames:
+        if os.path.exists(path + "\\" + f_card_name + ".png"):
+            print(f_card_name + ".png already downloaded! Using existing png")
+            return 
     
     # Open the url image, set stream to True, this will return the stream content.
     for image_url, name in zip(image_urls, formattedCardNames):

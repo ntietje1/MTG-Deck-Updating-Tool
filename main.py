@@ -5,7 +5,7 @@ def main():
     app = g.QApplication(sys.argv)
 
     # Create and show the main window
-    window = g.MyWindow()
+    window = g.MTGDeckUpdatingTool()
     window.show()
 
     # Run the event loop
