@@ -171,7 +171,8 @@ class MTGDeckUpdatingTool(QMainWindow):
         self.retranslateUi(self)
 
         self.tabWidget.setCurrentIndex(0)
-        
+    
+    # Add translation capability    
     def retranslateUi(self, MTGDeckUpdatingTool):
         MTGDeckUpdatingTool.setWindowTitle(QCoreApplication.translate("MTGDeckUpdatingTool", u"Dialog", None))
         self.url_button.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Retrieve Decks", None))
@@ -182,7 +183,8 @@ class MTGDeckUpdatingTool(QMainWindow):
         self.button_2.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Find Changes", None))
         self.button_3.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Manual Mode", None))
         self.button_4.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Generate PDF", None))
-        
+    
+    # Add two items to the top of the list widget as a header    
     def add_list_header(self):
         if fd.LastSavedDate != "no log file found!":
             # Set the list widget to display changes made to decks
@@ -200,7 +202,8 @@ class MTGDeckUpdatingTool(QMainWindow):
         else:
             newItem = QListWidgetItem("Make a save of your decks before attempting to find changes!")
             self.list_widget.addItem(newItem)
-            
+    
+    # Populate list widget with current deck changes        
     def update_list_widget(self):
         self.list_widget.clear()
         self.add_list_header()
@@ -238,98 +241,38 @@ class MTGDeckUpdatingTool(QMainWindow):
                     newItem.setBackground(QColor(250, 225, 225))
                     newItem.setFont(cardFont)
                     self.list_widget.addItem(newItem)
-            
+                    
+    # Populate the image widget with images of add cards        
     def update_images_widget(self):
         
         added_cards = [] # create a list of added cards
         for card_name, card_quantity in self.card_dict.items():
             if card_quantity > 0:
-                added_cards.append(card_name)
+                added_cards.extend(fi.splitCardName(card_name)[0])
         
-        for i, card_name in enumerate(added_cards):
-            image_path = os.getcwd() + "\\Images\\" + card_name + ".png"
+        cards_per_row = 3
+        for i, f_card_name in enumerate(added_cards):
+            image_path = os.getcwd() + "\\Images\\" + f_card_name + ".png"
+            row = i // cards_per_row
+            col = i % cards_per_row
             
-        
-        image_path = os.getcwd() + "\\Images\\Island.png"
-        image = Image.open(image_path)
+            image = Image.open(image_path)
 
-        qimage = ImageQt(image)
-        pixmap = QPixmap.fromImage(qimage)
-        image_label = QLabel()
-        image_label.setPixmap(pixmap)
-        image_label.setScaledContents(True)
-        image_label.setFixedSize(560//3, 560//3//2.5*3.5)
+            qimage = ImageQt(image)
+            pixmap = QPixmap.fromImage(qimage)
+            image_label = QLabel()
+            image_label.setPixmap(pixmap)
+            image_label.setScaledContents(True)
+            image_label.setFixedSize(560//3, 560//3//2.5*3.5)
 
-        vlayout = QVBoxLayout()
-        vlayout.addWidget(image_label)
-        vlayout.setAlignment(Qt.AlignCenter)
+            vlayout = QVBoxLayout()
+            vlayout.addWidget(image_label)
+            vlayout.setAlignment(Qt.AlignCenter)
 
-        self.gridLayout_5.addLayout(vlayout, 0, 0, 1, 1)
-        
-        image_path = os.getcwd() + "\\Images\\Mountain.png"
-        image = Image.open(image_path)
-
-        qimage = ImageQt(image)
-        pixmap = QPixmap.fromImage(qimage)
-        image_label = QLabel()
-        image_label.setPixmap(pixmap)
-        image_label.setScaledContents(True)
-        image_label.setFixedSize(560//3, 560//3//2.5*3.5)
-
-        vlayout = QVBoxLayout()
-        vlayout.addWidget(image_label)
-        vlayout.setAlignment(Qt.AlignCenter)
-
-        self.gridLayout_5.addLayout(vlayout, 0, 1, 1, 1)
-        
-        image_path = os.getcwd() + "\\Images\\Plains.png"
-        image = Image.open(image_path)
-
-        qimage = ImageQt(image)
-        pixmap = QPixmap.fromImage(qimage)
-        image_label = QLabel()
-        image_label.setPixmap(pixmap)
-        image_label.setScaledContents(True)
-        image_label.setFixedSize(560//3, 560//3//2.5*3.5)
-
-        vlayout = QVBoxLayout()
-        vlayout.addWidget(image_label)
-        vlayout.setAlignment(Qt.AlignCenter)
-
-        self.gridLayout_5.addLayout(vlayout, 0, 2, 1, 1)
-        
-        image_path = os.getcwd() + "\\Images\\Plains.png"
-        image = Image.open(image_path)
-
-        qimage = ImageQt(image)
-        pixmap = QPixmap.fromImage(qimage)
-        image_label = QLabel()
-        image_label.setPixmap(pixmap)
-        image_label.setScaledContents(True)
-        image_label.setFixedSize(560//3, 560//3//2.5*3.5)
-
-        vlayout = QVBoxLayout()
-        vlayout.addWidget(image_label)
-        vlayout.setAlignment(Qt.AlignCenter)
-
-        self.gridLayout_5.addLayout(vlayout, 1, 0, 1, 1)
-        
-        image_path = os.getcwd() + "\\Images\\Plains.png"
-        image = Image.open(image_path)
-
-        qimage = ImageQt(image)
-        pixmap = QPixmap.fromImage(qimage)
-        image_label = QLabel()
-        image_label.setPixmap(pixmap)
-        image_label.setScaledContents(True)
-        image_label.setFixedSize(560//3, 560//3//2.5*3.5)
-
-        vlayout = QVBoxLayout()
-        vlayout.addWidget(image_label)
-        vlayout.setAlignment(Qt.AlignCenter)
-
-        self.gridLayout_5.addLayout(vlayout, 2, 0, 1, 1)
+            print("Added " + f_card_name + " to image layout")
+            self.gridLayout_5.addLayout(vlayout, row, col, 1, 1)
     
+    # Run the save decks function on
     def on_button1_clicked(self):
         print("Saving decks. . .")
         fd.SaveDecks()

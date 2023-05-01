@@ -8,8 +8,8 @@ import string
 
 # Fix bad file names
 def FormatCardName(card_name):
-    formattedCardName = card_name.replace("\"", "") # Replace slashes
-    formattedCardName = card_name.replace("/", "") # Replace slashes
+    formattedCardName = card_name.replace("\"", "") # Delete slashes
+    formattedCardName = card_name.replace("/", "") # Delete slashes
     formattedCardName = formattedCardName.replace(" ", "-") # Replace spaces 
     formattedCardName = formattedCardName.replace(",", "") # Delete commas
     formattedCardName = formattedCardName.replace("\"", "") # Delete quotes
