@@ -13,6 +13,7 @@ import os
 
 class MTGDeckUpdatingTool(QMainWindow):
     card_dict = {}
+    alternate_image_dict = {}
 
     def __init__(self):
         super().__init__()
@@ -244,6 +245,8 @@ class MTGDeckUpdatingTool(QMainWindow):
                     
     # Populate the image widget with images of add cards        
     def update_images_widget(self):
+        
+        fi.GetAllImages(self.card_dict)
         
         added_cards = [] # create a list of added cards
         for card_name, card_quantity in self.card_dict.items():

@@ -4,7 +4,6 @@ import shutil
 import json
 from urllib.request import urlopen
 import time as t
-import string
 
 # Fix bad file names
 def FormatCardName(card_name):
@@ -17,6 +16,93 @@ def FormatCardName(card_name):
     formattedCardName = formattedCardName.lower()
     return formattedCardName
 
+def getPrintings(card_name):
+    
+    formattedCardName = FormatCardName(card_name)
+    
+    # Search for card using Scryfall API
+    json_url = "https://api.scryfall.com/cards/named?fuzzy={0}".format(formattedCardName)
+    response = requests.get(json_url)
+    card_info = response.json()
+
+    # Retrieve the prints_search_uri
+    prints_search_uri = card_info.get("prints_search_uri")
+    if not prints_search_uri:
+        return None
+    
+    # Detect if the card is dual faced
+    if card_info['layout'] in ["modal_dfc", "transform"]:
+        dual_faced = True
+    else:
+        dual_faced = False
+
+    # Get the printings for the card
+    response = requests.get(prints_search_uri)
+    printings_info = response.json()
+    
+    printings = []
+    image_uris = []
+    formattedCardNames = []
+    if not dual_faced:
+        formattedCardNames = [formattedCardName]
+        
+        # Add the default printing of the card to the list
+        default_printing = {}
+        default_printing["formattedCardNames"] = formattedCardNames
+        default_printing["set_name"] = "DEFAULT SET"
+        default_printing["set_code"] = "DEF"
+        default_printing["collector_num"] = "-1"
+        default_printing["image_uris"] = [card_info['image_uris']['png']]
+        printings.append(default_printing)
+        
+        # Parse the printing information and store it in a list
+        for printing in printings_info["data"]:
+            new_printing = {}
+            new_printing["formattedCardNames"] = formattedCardNames
+            new_printing["set_name"] = printing["set_name"]
+            new_printing["set_code"] = printing["set"]
+            new_printing["collector_num"] = printing["collector_number"]
+            new_printing["image_uris"] = [printing["image_uris"]["png"]]
+            printings.append(new_printing)
+    
+    else: # If dual faced:
+        # Split the card name into two halves
+        split_index = formattedCardName.find("--")
+        formattedCardNames = [formattedCardName[:split_index], formattedCardName[split_index+2:]]
+        
+        # Add the default printing of the card to the list
+        default_image_uris = []
+        for i in range (0,2): # Split card name and get 2 image urls
+            default_image_uris.append(card_info['card_faces'][i]['image_uris']['png'])
+        
+        default_printing = {}
+        default_printing["formattedCardNames"] = formattedCardNames
+        default_printing["set_name"] = "DEFAULT SET"
+        default_printing["set_code"] = "DEF"
+        default_printing["collector_num"] = "-1"
+        default_printing["image_uris"] = default_image_uris
+        printings.append(default_printing)
+        
+        # Parse the printing information and store uris for both faces in a list
+        for printing in printings_info["data"]:
+            image_uris = []
+            for i in range (0,2): # Split card name and get 2 image urls
+                image_uris.append(printing["card_faces"][i]["image_uris"]["png"])
+            
+            new_printing = {}
+            new_printing["formattedCardNames"] = formattedCardNames
+            new_printing["set_name"] = printing["set_name"]
+            new_printing["set_code"] = printing["set"]
+            new_printing["collector_num"] = printing["collector_number"]
+            new_printing["image_uris"] = image_uris
+            printings.append(new_printing)
+            
+    print(printings)
+    return printings
+
+# If a card is double faced, split the card name in 2 and make two scryfall api requests
+# Return a list of card names and image uris (will be length 1 most of the time)
+# Note: there is a slightly better way to directly request the image uris
 def splitCardName(card_name):
     formattedCardName = FormatCardName(card_name)
     
@@ -41,6 +127,8 @@ def splitCardName(card_name):
         image_urls.append(json_data['image_uris']['png'])
         formattedCardNames = [formattedCardName]
     
+    print("Retrieved image uri: ")
+    print(image_urls)
     return (formattedCardNames, image_urls)
 
 # Retrieve a single card image from scryfall's api
