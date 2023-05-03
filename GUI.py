@@ -34,9 +34,12 @@ class MyQComboBox(QComboBox):
         
         text = self.currentText()
         set_code = self.mtg_tool.set_mapping.get(text)
-        name = self.objectName()
-        print("Selected:", set_code, "from", name)
-        self.mtg_tool.insert_image(name, set_code)
+        f_card_name = self.objectName()
+        coordinate = self.mtg_tool.image_mapping.get(f_card_name)
+        row = coordinate[0]
+        col = coordinate[1]
+        print("Selected:", set_code, "from", f_card_name)
+        self.mtg_tool.insert_image(f_card_name, set_code, row, col)
 
 
 
@@ -274,24 +277,23 @@ class MTGDeckUpdatingTool(QMainWindow):
                     self.list_widget.addItem(newItem)
                     
     def init_images_widget(self):
-        all_card_printings = {}
-        all_card_printings = fi.GetAllImages(self.card_dict)
-        print(all_card_printings)
-
+        fi.GetAllImages(self.card_dict)
         added_cards = [] # create a list of added cards
         for card_name, card_quantity in self.card_dict.items():
             if card_quantity > 0:
-                print("Getting printings for: " + card_name)
                 printings = fi.getPrintings(card_name)
-                FormattedCardName = fi.FormatCardName(card_name)
-                print("attempting to add images for: " + FormattedCardName)
-                # added_cards.extend(printings.get("def").get("formattedCardNames"))
-                default_set_code = next(iter(printings))
+                for key, value in printings.items():
+                    default_set_code = key
+                    break
                 added_cards.extend(printings.get(default_set_code).get("formattedCardNames"))
 
         cards_per_row = 3
         for i, f_card_name in enumerate(added_cards):
-            image_path = os.getcwd() + "\\Images\\" + f_card_name + "-def" + ".png"
+            printings = fi.getPrintings(f_card_name)
+            for key, value in printings.items():
+                    default_set_code = key
+                    break
+            image_path = os.getcwd() + "\\Images\\" + f_card_name + "-" + default_set_code + ".png"
             row = i // cards_per_row
             col = i % cards_per_row
 
@@ -311,7 +313,6 @@ class MTGDeckUpdatingTool(QMainWindow):
             combo_box = MyQComboBox(self, scrollWidget=self.scrollArea)
             combo_box.setObjectName(f_card_name)
             print("Adding dropdown items to: " + f_card_name)
-            printings = fi.getPrintings(f_card_name)
             for set, printing in printings.items():
                 print("Adding set to " + f_card_name + "dropdown: " + str(set))
                 combo_box.addItems([printing.get("set_name")])
@@ -325,18 +326,10 @@ class MTGDeckUpdatingTool(QMainWindow):
             print("Added " + f_card_name + " to image layout at position: (" + str(row) + ", " + str(col) + ")")
             self.gridLayout_5.addLayout(vlayout, row, col, 1, 1)
             self.image_mapping[f_card_name] = tuple((row, col))
-            print("Added " + f_card_name + " to image_mapping")
-            print("new image mapping: ")
-            print(self.image_mapping)
         
-    def insert_image(self, f_card_name, set):
+    def insert_image(self, f_card_name, set, row, col):
         fi.GetCardImage(f_card_name, set_code = set)
-        print("image mapping:")
-        print("Retrieving coordinates for: " + f_card_name)
-        print(self.image_mapping.get(f_card_name)) # why none??
         coordinate = self.image_mapping.get(f_card_name)
-        print(type(coordinate))
-        print(coordinate)
         row = coordinate[0]
         col = coordinate[1]
         

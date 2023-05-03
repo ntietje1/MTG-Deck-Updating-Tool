@@ -18,9 +18,14 @@ def FormatCardName(card_name):
 
 def splitCardName(card_name):
     f_card_name = FormatCardName(card_name)
+    # Split the card name into two halves
     split_index = f_card_name.find("--")
-    formattedCardName = f_card_name[:split_index]
-    return formattedCardName
+    if split_index != -1:
+        formattedCardNames = [f_card_name[:split_index], f_card_name[split_index+2:]]
+        print("SPLIT CARD NAME: " + str(formattedCardNames))
+    else:
+        formattedCardNames = [f_card_name]
+    return formattedCardNames
 
 def getPrintings(card_name):
     
@@ -48,70 +53,79 @@ def getPrintings(card_name):
     printings = {}
     image_uris = []
     formattedCardNames = []
+    
+    # Gather default printing data
     if not dual_faced:
         formattedCardNames = [formattedCardName]
+        default_image_uris = [card_info['image_uris']['png']]
         
         # Add the default printing of the card to the list
         default_printing = {}
         default_printing["formattedCardNames"] = formattedCardNames
-        default_printing["set_name"] = "DEFAULT SET"
-        default_printing["set_code"] = "def"
-        default_printing["collector_num"] = "-1"
+        default_printing["set_name"] = card_info["set_name"]
+        default_printing["set_code"] = card_info["set"]
+        default_printing["collector_num"] = card_info["collector_number"]
         default_printing["image_uris"] = [card_info['image_uris']['png']]
-        default_printing["dual_faced"] = "False"
+        default_printing["dual_faced"] = str(dual_faced)
         default_printing["default"] = "True"
-        printings["def"] = default_printing
-        
-        # Parse the printing information and store it in a list
-        for printing in printings_info["data"]:
-            new_printing = {}
-            new_printing["formattedCardNames"] = formattedCardNames
-            new_printing["set_name"] = printing["set_name"]
-            new_printing["set_code"] = printing["set"]
-            new_printing["collector_num"] = printing["collector_number"]
-            new_printing["image_uris"] = [printing["image_uris"]["png"]]
-            new_printing["dual_faced"] = "False"
-            new_printing["default"] = "False"
-            printings[printing["set"]] = new_printing
-    
-    else: # If dual faced:
+        printings[card_info["set"]] = default_printing
+    else: # if dual_faced:
         # Split the card name into two halves
         split_index = formattedCardName.find("--")
-        formattedCardNames = [formattedCardName[:split_index], formattedCardName[split_index+2:]]
+        if split_index != -1:
+            formattedCardNames = [formattedCardName[:split_index], formattedCardName[split_index+2:]]
+            print("SPLIT CARD NAME: " + str(formattedCardNames))
+        else:
+            formattedCardNames = [formattedCardName]
         
         # Add the default printing of the card to the list
         default_image_uris = []
         for i in range (0,2): # Split card name and get 2 image urls
             default_image_uris.append(card_info['card_faces'][i]['image_uris']['png'])
         
+        # Add the default printing of the card to the list
         default_printing = {}
         default_printing["formattedCardNames"] = formattedCardNames
-        default_printing["set_name"] = "DEFAULT SET"
-        default_printing["set_code"] = "def"
-        default_printing["collector_num"] = "-1"
+        default_printing["set_name"] = card_info["set_name"]
+        default_printing["set_code"] = card_info["set"]
+        default_printing["collector_num"] = card_info["collector_number"]
         default_printing["image_uris"] = default_image_uris
-        default_printing["dual_faced"] = "True"
+        default_printing["dual_faced"] = str(dual_faced)
         default_printing["default"] = "True"
-        printings["def"] = default_printing
-        
+        printings[card_info["set"]] = default_printing
+
+    if not dual_faced:
+        # Parse the printing information and store it in a list
+        for printing in printings_info["data"]:
+            if printing["set"] != card_info["set"]:
+                new_printing = {}
+                new_printing["formattedCardNames"] = formattedCardNames
+                new_printing["set_name"] = printing["set_name"]
+                new_printing["set_code"] = printing["set"]
+                new_printing["collector_num"] = printing["collector_number"]
+                new_printing["image_uris"] = [printing["image_uris"]["png"]]
+                new_printing["dual_faced"] = str(dual_faced)
+                new_printing["default"] = "False"
+                printings[printing["set"]] = new_printing
+    
+    else: # If dual faced:
         # Parse the printing information and store uris for both faces in a list
         for printing in printings_info["data"]:
-            image_uris = []
-            for i in range (0,2): # Split card name and get 2 image urls
-                image_uris.append(printing["card_faces"][i]["image_uris"]["png"])
+            if printing["set"] != card_info["set"]:
+                image_uris = []
+                for i in range (0,2): # Split card name and get 2 image urls
+                    image_uris.append(printing["card_faces"][i]["image_uris"]["png"])
+                
+                new_printing = {}
+                new_printing["formattedCardNames"] = formattedCardNames
+                new_printing["set_name"] = printing["set_name"]
+                new_printing["set_code"] = printing["set"]
+                new_printing["collector_num"] = printing["collector_number"]
+                new_printing["image_uris"] = image_uris
+                new_printing["dual_faced"] = str(dual_faced)
+                new_printing["default"] = "False"
+                printings[printing["set"]] = new_printing
             
-            new_printing = {}
-            new_printing["formattedCardNames"] = formattedCardNames
-            new_printing["set_name"] = printing["set_name"]
-            new_printing["set_code"] = printing["set"]
-            new_printing["collector_num"] = printing["collector_number"]
-            new_printing["image_uris"] = image_uris
-            new_printing["dual_faced"] = "True"
-            new_printing["default"] = "False"
-            printings[printing["set"]] = new_printing
-            
-    #print(printings)
-    #t.sleep(0.1)
     return printings
 
 # Retrieve a single card image from scryfall's api
@@ -123,24 +137,29 @@ def GetCardImage(card_name, **kwargs):
         os.makedirs(path)
         print("New image directory created!")
         
-    set_code = "def"
+    set_code = ""
+    alternatePrinting = False
     for key,value in kwargs.items():
         if key == "set_code":
             set_code = value.lower()
+            alternatePrinting = True
             print("set code received!", set_code)
             
-        
-    # Split dual faced cards and retrieve all image urls as lists
-    printings = getPrintings(card_name)
-    #print(printings)
+    printings = getPrintings(card_name)        
+            
+    if not alternatePrinting:    
+        # Get the first key in the dict
+        for key, value in printings.items():
+            set_code = key
+            break
     try:
         formattedCardNames = printings.get(set_code).get("formattedCardNames")
-        image_urls = printings.get(set_code).get("image_uris")
+        image_uris = printings.get(set_code).get("image_uris")
     except AttributeError as e:
         # handle the AttributeError
         print("No printing of " + card_name + " found from set: " + set_code)
         formattedCardNames = []
-        image_urls = []
+        image_uris = []
     
     # Check if the image/images have already been downloaded
     # This might not work if one half of a dual faced card was downloaded (probably won't happen)
@@ -150,11 +169,13 @@ def GetCardImage(card_name, **kwargs):
             return printings
     
     # Open the url image, set stream to True, this will return the stream content.
-    for image_url, name in zip(image_urls, formattedCardNames):
-        r = requests.get(image_url, stream = True)
+    for image_uri, f_card_name in zip(image_uris, formattedCardNames):
+        filename = f_card_name + "-" + set_code + ".png"
+        
+        print("DOWNLOADING IMAGE: " + filename + " FROM: " + image_uri)
+        r = requests.get(image_uri, stream = True)
     
         # Check if the image was retrieved successfully
-        filename = name + "-" + set_code + ".png"
         if r.status_code == 200:
             # Set decode_content value to True, otherwise the downloaded image file's size will be zero.
             r.raw.decode_content = True
@@ -196,11 +217,12 @@ def GetAllImages(card_dict):
         if card_quantity > 0:
             printing = GetCardImage(card_name)
             if printing.get("dual_faced") == "False":
-                FormatCardName = FormatCardName(card_name)
+                FormattedCardNames = [FormatCardName(card_name)]
             else:
-                FormatCardName = splitCardName(card_name)
-                
-            all_card_printings[card_name] = printing
+                FormattedCardNames = splitCardName(card_name)
+            
+            for f_card_name in FormattedCardNames:
+                all_card_printings[f_card_name] = printing
             t.sleep(0.1)
     return all_card_printings        
 
