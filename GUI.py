@@ -11,10 +11,40 @@ import GeneratePDF as gp
 
 import os
 
+
+class MyQComboBox(QComboBox):
+    def __init__(self, mtg_tool, scrollWidget=None, *args, **kwargs):
+        super(MyQComboBox, self).__init__(*args, **kwargs)  
+        self.scrollWidget = scrollWidget
+        self.mtg_tool = mtg_tool
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.currentIndexChanged.connect(self.on_combo_box_changed)
+        self.user_interacted = False
+
+    def wheelEvent(self, event):
+        if self.hasFocus():
+            return super().wheelEvent(event)
+        else:
+            return self.scrollWidget.wheelEvent(event)
+    
+    def on_combo_box_changed(self):
+        if not self.user_interacted:  # check if the flag is False
+            self.user_interacted = True  # set the flag to True
+            return  # skip the function call
+        
+        text = self.currentText()
+        set_code = self.mtg_tool.set_mapping.get(text)
+        name = self.objectName()
+        print("Selected:", set_code, "from", name)
+        self.mtg_tool.insert_image(name, set_code)
+
+
+
 class MTGDeckUpdatingTool(QMainWindow):
     card_dict = {}
-    alternate_image_dict = {}
-
+    image_mapping = {}
+    set_mapping = {}
+    
     def __init__(self):
         super().__init__()
             
@@ -109,7 +139,7 @@ class MTGDeckUpdatingTool(QMainWindow):
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setWidgetResizable(True) # allow contents to be resized
         self.scrollArea.setMinimumWidth(610)
-        self.scrollArea.setMinimumHeight(300)
+        self.scrollArea.setMinimumHeight(360)
         self.scrollArea.setContentsMargins(0,0,0,0)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
@@ -243,22 +273,28 @@ class MTGDeckUpdatingTool(QMainWindow):
                     newItem.setFont(cardFont)
                     self.list_widget.addItem(newItem)
                     
-    # Populate the image widget with images of add cards        
-    def update_images_widget(self):
-        
-        fi.GetAllImages(self.card_dict)
-        
+    def init_images_widget(self):
+        all_card_printings = {}
+        all_card_printings = fi.GetAllImages(self.card_dict)
+        print(all_card_printings)
+
         added_cards = [] # create a list of added cards
         for card_name, card_quantity in self.card_dict.items():
             if card_quantity > 0:
-                added_cards.extend(fi.splitCardName(card_name)[0])
-        
+                print("Getting printings for: " + card_name)
+                printings = fi.getPrintings(card_name)
+                FormattedCardName = fi.FormatCardName(card_name)
+                print("attempting to add images for: " + FormattedCardName)
+                # added_cards.extend(printings.get("def").get("formattedCardNames"))
+                default_set_code = next(iter(printings))
+                added_cards.extend(printings.get(default_set_code).get("formattedCardNames"))
+
         cards_per_row = 3
         for i, f_card_name in enumerate(added_cards):
-            image_path = os.getcwd() + "\\Images\\" + f_card_name + ".png"
+            image_path = os.getcwd() + "\\Images\\" + f_card_name + "-def" + ".png"
             row = i // cards_per_row
             col = i % cards_per_row
-            
+
             image = Image.open(image_path)
 
             qimage = ImageQt(image)
@@ -272,8 +308,82 @@ class MTGDeckUpdatingTool(QMainWindow):
             vlayout.addWidget(image_label)
             vlayout.setAlignment(Qt.AlignCenter)
 
-            print("Added " + f_card_name + " to image layout")
+            combo_box = MyQComboBox(self, scrollWidget=self.scrollArea)
+            combo_box.setObjectName(f_card_name)
+            print("Adding dropdown items to: " + f_card_name)
+            printings = fi.getPrintings(f_card_name)
+            for set, printing in printings.items():
+                print("Adding set to " + f_card_name + "dropdown: " + str(set))
+                combo_box.addItems([printing.get("set_name")])
+                self.set_mapping[printing.get("set_name")] =  printing.get("set_code")
+            combo_box.setFixedWidth(image_label.width()) # Set the width of the dropdown to match the width of the image
+            
+            hlayout = QHBoxLayout()
+            hlayout.addWidget(combo_box)
+            vlayout.addLayout(hlayout)
+
+            print("Added " + f_card_name + " to image layout at position: (" + str(row) + ", " + str(col) + ")")
             self.gridLayout_5.addLayout(vlayout, row, col, 1, 1)
+            self.image_mapping[f_card_name] = tuple((row, col))
+            print("Added " + f_card_name + " to image_mapping")
+            print("new image mapping: ")
+            print(self.image_mapping)
+        
+    def insert_image(self, f_card_name, set):
+        fi.GetCardImage(f_card_name, set_code = set)
+        print("image mapping:")
+        print("Retrieving coordinates for: " + f_card_name)
+        print(self.image_mapping.get(f_card_name)) # why none??
+        coordinate = self.image_mapping.get(f_card_name)
+        print(type(coordinate))
+        print(coordinate)
+        row = coordinate[0]
+        col = coordinate[1]
+        
+        image_path = os.getcwd() + "\\Images\\" + f_card_name + "-" + set + ".png"
+
+        image = Image.open(image_path)
+
+        qimage = ImageQt(image)
+        pixmap = QPixmap.fromImage(qimage)
+        image_label = QLabel()
+        image_label.setPixmap(pixmap)
+        image_label.setScaledContents(True)
+        image_label.setFixedSize(560//3, 560//3//2.5*3.5)
+
+        vlayout = QVBoxLayout()
+        vlayout.addWidget(image_label)
+        vlayout.setAlignment(Qt.AlignCenter)
+
+        combo_box = self.retrieve_combo_box(row, col)
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(combo_box)
+        vlayout.addLayout(hlayout)
+
+        print("Added " + f_card_name + " to image layout at position: (" + str(row) + ", " + str(col) + ")")
+        self.remove_item_at_position(row, col)
+        self.gridLayout_5.addLayout(vlayout, row, col, 1, 1)
+        
+        return
+    
+    def retrieve_combo_box(self,row,col):
+        previous_vlayout = self.gridLayout_5.itemAtPosition(row, col)
+        if previous_vlayout is not None:
+            previous_hlayout = previous_vlayout.itemAt(1) # Get the QHBoxLayout containing the previous widget
+            previous_combo_box = previous_hlayout.itemAt(0).widget() # Get the QComboBox widget from the QHBoxLayout
+            return previous_combo_box
+                
+    
+    def remove_item_at_position(self, row, col):
+        item = self.gridLayout_5.itemAtPosition(row, col)
+        if item is not None:
+            widget = item.widget()
+            if widget is not None:
+                self.gridLayout_5.removeWidget(widget)
+                widget.deleteLater()
+            else:
+                self.gridLayout_5.removeItem(item)
+        
     
     # Run the save decks function on
     def on_button1_clicked(self):
@@ -284,7 +394,7 @@ class MTGDeckUpdatingTool(QMainWindow):
         
         print("Checking for changes. . .")
         self.update_list_widget()
-        self.update_images_widget()
+        self.init_images_widget()
             
     def on_button3_clicked(self):
         print("button 3 clicked!")
