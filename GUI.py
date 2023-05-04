@@ -33,20 +33,29 @@ class MyQComboBox(QComboBox):
             return  # skip the function call
         
         text = self.currentText()
-        set_code = self.mtg_tool.set_mapping.get(text)
+        set_code = self.mtg_tool.set_name_code_mapping.get(text)
+        set_code = set_code + "-"
         f_card_name = self.objectName()
+        printings = fi.getPrintings(f_card_name)
+        card_id = -1
+        for id, printing in printings.items():
+            if set_code in id:
+                card_id = id
+        
         coordinate = self.mtg_tool.image_mapping.get(f_card_name)
         row = coordinate[0]
         col = coordinate[1]
-        print("Selected:", set_code, "from", f_card_name)
-        self.mtg_tool.insert_image(f_card_name, set_code, row, col)
+        print("Selected:", card_id, "from", f_card_name)
+        self.mtg_tool.insert_image(f_card_name, card_id, row, col)
+        self.mtg_tool.final_printing_selections[f_card_name] = card_id
 
 
 
 class MTGDeckUpdatingTool(QMainWindow):
-    card_dict = {}
-    image_mapping = {}
-    set_mapping = {}
+    card_dict = {} # (key,value) = (card_name, card_quantity)
+    image_mapping = {} # (key,value) = (card_name, (row,col))
+    set_name_code_mapping = {} # (key,value) = (set_name, set_code)
+    final_printing_selections = {} # (key,value) = (card_name, unique_card_id)
     
     def __init__(self):
         super().__init__()
@@ -283,17 +292,17 @@ class MTGDeckUpdatingTool(QMainWindow):
             if card_quantity > 0:
                 printings = fi.getPrintings(card_name)
                 for key, value in printings.items():
-                    default_set_code = key
+                    default_id = key
                     break
-                added_cards.extend(printings.get(default_set_code).get("formattedCardNames"))
+                added_cards.extend(printings.get(default_id).get("formattedCardNames"))
 
         cards_per_row = 3
         for i, f_card_name in enumerate(added_cards):
             printings = fi.getPrintings(f_card_name)
             for key, value in printings.items():
-                    default_set_code = key
+                    default_id = key
                     break
-            image_path = os.getcwd() + "\\Images\\" + f_card_name + "-" + default_set_code + ".png"
+            image_path = os.getcwd() + "\\Images\\" + fi.generateFileName(f_card_name, default_id)
             row = i // cards_per_row
             col = i % cards_per_row
 
@@ -313,10 +322,14 @@ class MTGDeckUpdatingTool(QMainWindow):
             combo_box = MyQComboBox(self, scrollWidget=self.scrollArea)
             combo_box.setObjectName(f_card_name)
             print("Adding dropdown items to: " + f_card_name)
-            for set, printing in printings.items():
-                print("Adding set to " + f_card_name + "dropdown: " + str(set))
+            for id, printing in printings.items():
+                print("Adding set to " + f_card_name + "dropdown: " + str(id))
+                split_index = id.find("-")
+                if split_index != -1:
+                    set_code = id[:split_index]
+                    print("Turned " + id + " into: " + set_code)
+                    self.set_name_code_mapping[printing.get("set_name")] = set_code
                 combo_box.addItems([printing.get("set_name")])
-                self.set_mapping[printing.get("set_name")] =  printing.get("set_code")
             combo_box.setFixedWidth(image_label.width()) # Set the width of the dropdown to match the width of the image
             
             hlayout = QHBoxLayout()
@@ -326,14 +339,16 @@ class MTGDeckUpdatingTool(QMainWindow):
             print("Added " + f_card_name + " to image layout at position: (" + str(row) + ", " + str(col) + ")")
             self.gridLayout_5.addLayout(vlayout, row, col, 1, 1)
             self.image_mapping[f_card_name] = tuple((row, col))
+            self.final_printing_selections[f_card_name] = default_id
         
-    def insert_image(self, f_card_name, set, row, col):
-        fi.GetCardImage(f_card_name, set_code = set)
+    def insert_image(self, f_card_name, card_id, row, col):
+        print("GETTING CARD IMAGE: " + f_card_name + "-" + card_id)
+        fi.GetCardImage(f_card_name, id = card_id)
         coordinate = self.image_mapping.get(f_card_name)
         row = coordinate[0]
         col = coordinate[1]
         
-        image_path = os.getcwd() + "\\Images\\" + f_card_name + "-" + set + ".png"
+        image_path = os.getcwd() + "\\Images\\" + fi.generateFileName(f_card_name, card_id)
 
         image = Image.open(image_path)
 
@@ -384,7 +399,6 @@ class MTGDeckUpdatingTool(QMainWindow):
         fd.SaveDecks()
 
     def on_button2_clicked(self):
-        
         print("Checking for changes. . .")
         self.update_list_widget()
         self.init_images_widget()
@@ -394,14 +408,7 @@ class MTGDeckUpdatingTool(QMainWindow):
     
     def on_button4_clicked(self):
         print("Generating pdf. . .")
-
-        # Call the GetAllImages and genPDF functions in separate threads to avoid freezing the GUI
-        thread1 = threading.Thread(target=fi.GetAllImages, args=(MTGDeckUpdatingTool.card_dict,))
-        thread1.start()
-        thread1.join()
-        
-        thread2 = threading.Thread(target=gp.genPDF, args=(MTGDeckUpdatingTool.card_dict,))
-        thread2.start()
+        gp.genPDF(self.final_printing_selections)
     
     def on_url_button_clicked(self):
         text = self.url_bar.text()

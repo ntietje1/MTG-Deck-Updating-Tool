@@ -9,7 +9,7 @@ def getPDFPath():
 
 # Generate a pdf with card images true to size
 # Saves the pdf to the /PDFs directory
-def genPDF(card_dict):
+def genPDF(final_printing_selections):
     card_width = 2.5 # inches
     card_height = 3.5 # inches
     pixel_width = 745 # pixels
@@ -25,20 +25,20 @@ def genPDF(card_dict):
     row_border_size = (page_width_pixels - cards_per_row * pixel_width)/2
     col_border_size = (page_height_pixels - cards_per_row * pixel_height)/2
     
-    # Convert cards hashmap into a list of cards to print
-    num_cards_added = 0
-    added_cards = [] # create a list of added cards (multiple cards added as duplicates)
-    for card_name, card_quantity in card_dict.items():
-        if card_quantity > 0:
-            for i in range(card_quantity):
-                added_cards.append(card_name)
-                num_cards_added = num_cards_added + card_quantity
-        else:
-            for i in range(-1 * card_quantity):
-                removed_cards_dict[card_name] = -1 * card_quantity
+    # # Convert cards hashmap into a list of cards to print
+    # num_cards_added = 0
+    # added_cards = [] # create a list of added cards (multiple cards added as duplicates)
+    # for card_name, card_quantity in card_dict.items():
+    #     if card_quantity > 0:
+    #         for i in range(card_quantity):
+    #             added_cards.append(card_name)
+    #             num_cards_added = num_cards_added + card_quantity
+        # else:
+        #     for i in range(-1 * card_quantity):
+        #         removed_cards_dict[card_name] = -1 * card_quantity
                 
     # Prevent attempting to output a 0 page pdf
-    if num_cards_added == 0:
+    if len(final_printing_selections) == 0:
         print("No deck additions found! No PDF generated :(")
         return
     
@@ -48,20 +48,12 @@ def genPDF(card_dict):
 
     # Loop over each card image and add it to the blank pdf
     j = 0
-    for card_name in added_cards:
+    for card_name, id in final_printing_selections.items():
         if (j % cards_per_page == 0):
             page = deck_pdf.new_page(width = page_width_pixels, height = page_height_pixels)
             j = 0
         
-        # Determine file paths for card images
-        formattedCardName = fi.FormatCardName(card_name)
-        if "--" in formattedCardName:
-            formattedCardNames = fi.splitCardName(card_name)[0] # Split any dual faced cards
-            formattedCardName = formattedCardNames[0]
-            if len(formattedCardNames) > 1:
-                added_cards.append(formattedCardNames[1]) 
-        
-        img_path = os.getcwd() + "\\Images\\" + formattedCardName + ".png"
+        img_path = os.getcwd() + "\\Images\\" + fi.generateFileName(card_name, id)
         
         # Convert the png to pdf
         card_image = fitz.open(img_path)

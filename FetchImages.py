@@ -5,6 +5,9 @@ import json
 from urllib.request import urlopen
 import time as t
 
+def generateFileName(card_name, id):
+    return card_name + "-" + id + ".png"
+
 # Fix bad file names
 def FormatCardName(card_name):
     formattedCardName = card_name.replace("\"", "") # Delete slashes
@@ -52,15 +55,15 @@ def getPrintings(card_name):
     
     printings = {}
     image_uris = []
-    formattedCardNames = []
+    formattedCardNames = splitCardName(card_info["name"])
     
     # Gather default printing data
     if not dual_faced:
-        formattedCardNames = [formattedCardName]
         default_image_uris = [card_info['image_uris']['png']]
         
         # Add the default printing of the card to the list
         default_printing = {}
+        default_printing["full_name"] = FormatCardName(card_info["name"])
         default_printing["formattedCardNames"] = formattedCardNames
         default_printing["set_name"] = card_info["set_name"]
         default_printing["set_code"] = card_info["set"]
@@ -68,16 +71,28 @@ def getPrintings(card_name):
         default_printing["image_uris"] = [card_info['image_uris']['png']]
         default_printing["dual_faced"] = str(dual_faced)
         default_printing["default"] = "True"
-        printings[card_info["set"]] = default_printing
-    else: # if dual_faced:
-        # Split the card name into two halves
-        split_index = formattedCardName.find("--")
-        if split_index != -1:
-            formattedCardNames = [formattedCardName[:split_index], formattedCardName[split_index+2:]]
-            print("SPLIT CARD NAME: " + str(formattedCardNames))
-        else:
-            formattedCardNames = [formattedCardName]
+        default_printing["unique_id"] = default_printing["set_code"] + "-" + str(default_printing["collector_num"])
+        printings[default_printing["unique_id"]] = default_printing
+        print("Added printing: " + str(default_printing["unique_id"]) + " to: " + str(default_printing["full_name"]))
         
+        # Parse the printing information and store it in a list
+        print("NUMBER OF PRINTINGS FOR: " + default_printing["full_name"] + ": " + str(len(printings_info["data"])))
+        for printing in printings_info["data"]:
+            new_printing = {}
+            new_printing["full_name"] = FormatCardName(card_info["name"])
+            new_printing["formattedCardNames"] = formattedCardNames
+            new_printing["set_name"] = printing["set_name"]
+            new_printing["set_code"] = printing["set"]
+            new_printing["collector_num"] = printing["collector_number"]
+            new_printing["image_uris"] = [printing["image_uris"]["png"]]
+            new_printing["dual_faced"] = str(dual_faced)
+            new_printing["default"] = "False"
+            new_printing["unique_id"] = new_printing["set_code"] + "-" + str(new_printing["collector_num"])
+            if new_printing["unique_id"] != default_printing["unique_id"]:
+                printings[new_printing["unique_id"]] = new_printing
+                print("Added printing: " + str(new_printing["unique_id"]) + " to: " + str(new_printing["full_name"]))
+                
+    else: # if dual_faced:
         # Add the default printing of the card to the list
         default_image_uris = []
         for i in range (0,2): # Split card name and get 2 image urls
@@ -85,6 +100,7 @@ def getPrintings(card_name):
         
         # Add the default printing of the card to the list
         default_printing = {}
+        default_printing["full_name"] = FormatCardName(card_info["name"])
         default_printing["formattedCardNames"] = formattedCardNames
         default_printing["set_name"] = card_info["set_name"]
         default_printing["set_code"] = card_info["set"]
@@ -92,40 +108,31 @@ def getPrintings(card_name):
         default_printing["image_uris"] = default_image_uris
         default_printing["dual_faced"] = str(dual_faced)
         default_printing["default"] = "True"
-        printings[card_info["set"]] = default_printing
-
-    if not dual_faced:
-        # Parse the printing information and store it in a list
-        for printing in printings_info["data"]:
-            if printing["set"] != card_info["set"]:
-                new_printing = {}
-                new_printing["formattedCardNames"] = formattedCardNames
-                new_printing["set_name"] = printing["set_name"]
-                new_printing["set_code"] = printing["set"]
-                new_printing["collector_num"] = printing["collector_number"]
-                new_printing["image_uris"] = [printing["image_uris"]["png"]]
-                new_printing["dual_faced"] = str(dual_faced)
-                new_printing["default"] = "False"
-                printings[printing["set"]] = new_printing
-    
-    else: # If dual faced:
+        default_printing["unique_id"] = default_printing["set_code"] + "-" + str(default_printing["collector_num"])
+        printings[default_printing["unique_id"]] = default_printing
+        print("Added printing: " + str(default_printing["unique_id"]) + " to: " + str(default_printing["full_name"]))
+        
         # Parse the printing information and store uris for both faces in a list
+        print("NUMBER OF PRINTINGS FOR: " + default_printing["full_name"] + ": " + str(len(printings_info["data"])))
         for printing in printings_info["data"]:
-            if printing["set"] != card_info["set"]:
-                image_uris = []
-                for i in range (0,2): # Split card name and get 2 image urls
-                    image_uris.append(printing["card_faces"][i]["image_uris"]["png"])
-                
-                new_printing = {}
-                new_printing["formattedCardNames"] = formattedCardNames
-                new_printing["set_name"] = printing["set_name"]
-                new_printing["set_code"] = printing["set"]
-                new_printing["collector_num"] = printing["collector_number"]
-                new_printing["image_uris"] = image_uris
-                new_printing["dual_faced"] = str(dual_faced)
-                new_printing["default"] = "False"
-                printings[printing["set"]] = new_printing
+            image_uris = []
+            for i in range (0,2): # Split card name and get 2 image urls
+                image_uris.append(printing["card_faces"][i]["image_uris"]["png"])
             
+            new_printing = {}
+            new_printing["full_name"] = FormatCardName(card_info["name"])
+            new_printing["formattedCardNames"] = formattedCardNames
+            new_printing["set_name"] = printing["set_name"]
+            new_printing["set_code"] = printing["set"]
+            new_printing["collector_num"] = printing["collector_number"]
+            new_printing["image_uris"] = image_uris
+            new_printing["dual_faced"] = str(dual_faced)
+            new_printing["default"] = "False"
+            new_printing["unique_id"] = new_printing["set_code"] + "-" + str(new_printing["collector_num"])
+            if new_printing["unique_id"] != default_printing["unique_id"]:
+                printings[new_printing["unique_id"]] = new_printing
+                print("Added printing: " + str(new_printing["unique_id"]) + " to: " + str(new_printing["full_name"]))
+
     return printings
 
 # Retrieve a single card image from scryfall's api
@@ -137,42 +144,52 @@ def GetCardImage(card_name, **kwargs):
         os.makedirs(path)
         print("New image directory created!")
         
-    set_code = ""
+    # set_code = ""
+    # col_num = -1
+    id = ""
     alternatePrinting = False
     for key,value in kwargs.items():
-        if key == "set_code":
-            set_code = value.lower()
+        # if key == "set_code":
+        #     set_code = value.lower()
+        #     alternatePrinting = True
+        #     print("set code received!", set_code)
+        # if key == "col_num":
+        #     col_num = value
+        #     alternatePrinting = True
+        #     print("collector number received!", col_num)
+        if key == "id":
+            id = value
             alternatePrinting = True
-            print("set code received!", set_code)
+            print("unique id received!", id)
             
     printings = getPrintings(card_name)        
             
     if not alternatePrinting:    
         # Get the first key in the dict
         for key, value in printings.items():
-            set_code = key
+            id = key
             break
     try:
-        formattedCardNames = printings.get(set_code).get("formattedCardNames")
-        image_uris = printings.get(set_code).get("image_uris")
+        formattedCardNames = printings.get(id).get("formattedCardNames") # TRIED TO GET ID THAT DOESNT EXIST???
+        image_uris = printings.get(id).get("image_uris")
     except AttributeError as e:
         # handle the AttributeError
-        print("No printing of " + card_name + " found from set: " + set_code)
+        print("No printing of " + card_name + " found with id: " + id)
         formattedCardNames = []
         image_uris = []
-    
+    print("image_uris: " + str(image_uris))
+    print("names: " + str(formattedCardNames))
     # Check if the image/images have already been downloaded
-    # This might not work if one half of a dual faced card was downloaded (probably won't happen)
     for f_card_name in formattedCardNames:
-        if os.path.exists(path + "\\" + f_card_name + "-" + set_code + ".png"):
-            print(f_card_name + "-" + set_code + ".png already downloaded! Using existing png")
+        if os.path.exists(path + "\\" + generateFileName(f_card_name, id)):
+            print(generateFileName(f_card_name, id = id) + " already downloaded! Using existing png")
             return printings
     
     # Open the url image, set stream to True, this will return the stream content.
     for image_uri, f_card_name in zip(image_uris, formattedCardNames):
-        filename = f_card_name + "-" + set_code + ".png"
-        
+        filename = generateFileName(f_card_name, id)
         print("DOWNLOADING IMAGE: " + filename + " FROM: " + image_uri)
+    
         r = requests.get(image_uri, stream = True)
     
         # Check if the image was retrieved successfully
