@@ -13,6 +13,8 @@ import os
 
 
 class MyQComboBox(QComboBox):
+    set_name_id_mapping = {} # (key,value) = (index, set_code)
+    
     def __init__(self, mtg_tool, scrollWidget=None, *args, **kwargs):
         super(MyQComboBox, self).__init__(*args, **kwargs)  
         self.scrollWidget = scrollWidget
@@ -33,33 +35,31 @@ class MyQComboBox(QComboBox):
             return  # skip the function call
         
         text = self.currentText()
-        set_code = self.mtg_tool.set_name_code_mapping.get(text)
-        set_code = set_code + "-"
+        id = self.set_name_id_mapping[text]
         f_card_name = self.objectName()
-        printings = fi.getPrintings(f_card_name)
-        card_id = -1
-        for id, printing in printings.items():
-            if set_code in id:
-                card_id = id
+        #printings = fi.getPrintings(f_card_name)
         
-        coordinate = self.mtg_tool.image_mapping.get(f_card_name)
+        coordinate = self.mtg_tool.image_mapping[f_card_name]
         row = coordinate[0]
         col = coordinate[1]
-        print("Selected:", card_id, "from", f_card_name)
-        self.mtg_tool.insert_image(f_card_name, card_id, row, col)
-        self.mtg_tool.final_printing_selections[f_card_name] = card_id
+        print("Selected:", id, "from", f_card_name)
+        self.mtg_tool.insert_image(f_card_name, id, row, col)
+        self.mtg_tool.final_printing_selections[f_card_name] = id
 
 
 
 class MTGDeckUpdatingTool(QMainWindow):
     card_dict = {} # (key,value) = (card_name, card_quantity)
     image_mapping = {} # (key,value) = (card_name, (row,col))
-    set_name_code_mapping = {} # (key,value) = (set_name, set_code)
     final_printing_selections = {} # (key,value) = (card_name, unique_card_id)
+    printings_cache = {}
     
     def __init__(self):
         super().__init__()
-            
+        self.init_ui()
+        
+        
+    def init_ui(self):
         # Create a central widget
         self.central_widget = QWidget(self)
         self.central_widget.setObjectName("central_widget")
@@ -108,6 +108,7 @@ class MTGDeckUpdatingTool(QMainWindow):
         # Create a tab widget for the deck list and deck editor tabs
         self.tabWidget = QTabWidget(self)
         self.tabWidget.setObjectName(u"tabWidget")
+        self.tabWidget.setMinimumWidth(630)
         sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy1.setHorizontalStretch(2)
         sizePolicy1.setVerticalStretch(2)
@@ -286,25 +287,51 @@ class MTGDeckUpdatingTool(QMainWindow):
                     self.list_widget.addItem(newItem)
                     
     def init_images_widget(self):
-        fi.GetAllImages(self.card_dict)
-        added_cards = [] # create a list of added cards
-        for card_name, card_quantity in self.card_dict.items():
-            if card_quantity > 0:
-                printings = fi.getPrintings(card_name)
-                for key, value in printings.items():
-                    default_id = key
-                    break
-                added_cards.extend(printings.get(default_id).get("formattedCardNames"))
-
         cards_per_row = 3
-        for i, f_card_name in enumerate(added_cards):
-            printings = fi.getPrintings(f_card_name)
-            for key, value in printings.items():
-                    default_id = key
-                    break
-            image_path = os.getcwd() + "\\Images\\" + fi.generateFileName(f_card_name, default_id)
-            row = i // cards_per_row
-            col = i % cards_per_row
+        i = 0
+        # Iterate over every card that needs to be printed
+        for card_name, card_quantity in self.card_dict.items():
+            if card_quantity <= 0:
+                continue
+            if card_name not in self.printings_cache: # Utilize cached data if possible
+                self.printings_cache[card_name] = fi.getPrintings(card_name)
+            printings = self.printings_cache[card_name]
+            default_id = list(printings.keys())[0] # get first (default) key
+
+            # Iterate over all card names for this card (front / back side)
+            for f_card_name in printings[default_id]["formattedCardNames"]:
+                if f_card_name not in self.printings_cache: # Utilize cached data if possible
+                    self.printings_cache[f_card_name] = fi.getPrintings(f_card_name)
+                printings = self.printings_cache[f_card_name]
+                row = i // cards_per_row
+                col = i % cards_per_row
+
+                # Initialize a combo_box 
+                combo_box = MyQComboBox(self, scrollWidget=self.scrollArea)
+                combo_box.setObjectName(f_card_name)
+                print("Adding dropdown items to: " + f_card_name)
+                for id, printing in printings.items():
+                    #print("Adding set to " + f_card_name + "dropdown: " + str(id))
+                    item_text = printing["set_name"] + " #" + printing["collector_num"]
+                    combo_box.set_name_id_mapping[item_text] = id
+                    combo_box.addItems([item_text])
+                
+                # Add the image to the grid and update mappings    
+                self.image_mapping[f_card_name] = tuple((row, col))
+                self.final_printing_selections[f_card_name] = default_id
+                self.insert_image(f_card_name, default_id, row, col, combo_box = combo_box)
+                i += 1
+        
+    def insert_image(self, f_card_name, card_id, row, col, combo_box=None, **kwargs):
+        try:
+            print("Getting card image: " + f_card_name + "-" + card_id)
+            fi.GetCardImage(f_card_name, id=card_id, printings_cache = self.printings_cache)
+            coordinate = self.image_mapping[f_card_name]
+            row = coordinate[0]
+            col = coordinate[1]
+
+            file_name = fi.generateFileName(f_card_name, card_id)
+            image_path = os.path.join(os.getcwd(), "Images", file_name)
 
             image = Image.open(image_path)
 
@@ -319,69 +346,30 @@ class MTGDeckUpdatingTool(QMainWindow):
             vlayout.addWidget(image_label)
             vlayout.setAlignment(Qt.AlignCenter)
 
-            combo_box = MyQComboBox(self, scrollWidget=self.scrollArea)
-            combo_box.setObjectName(f_card_name)
-            print("Adding dropdown items to: " + f_card_name)
-            for id, printing in printings.items():
-                print("Adding set to " + f_card_name + "dropdown: " + str(id))
-                split_index = id.find("-")
-                if split_index != -1:
-                    set_code = id[:split_index]
-                    print("Turned " + id + " into: " + set_code)
-                    self.set_name_code_mapping[printing.get("set_name")] = set_code
-                combo_box.addItems([printing.get("set_name")])
-            combo_box.setFixedWidth(image_label.width()) # Set the width of the dropdown to match the width of the image
-            
+            if combo_box is None:
+                combo_box = self.retrieve_combo_box(row, col)
+
+            combo_box.setFixedWidth(image_label.width())
             hlayout = QHBoxLayout()
             hlayout.addWidget(combo_box)
             vlayout.addLayout(hlayout)
 
-            print("Added " + f_card_name + " to image layout at position: (" + str(row) + ", " + str(col) + ")")
+            print("Added " + file_name + " to image layout at position: (" + str(row) + ", " + str(col) + ")")
+            self.remove_item_at_position(row, col)
             self.gridLayout_5.addLayout(vlayout, row, col, 1, 1)
-            self.image_mapping[f_card_name] = tuple((row, col))
-            self.final_printing_selections[f_card_name] = default_id
-        
-    def insert_image(self, f_card_name, card_id, row, col):
-        print("GETTING CARD IMAGE: " + f_card_name + "-" + card_id)
-        fi.GetCardImage(f_card_name, id = card_id)
-        coordinate = self.image_mapping.get(f_card_name)
-        row = coordinate[0]
-        col = coordinate[1]
-        
-        image_path = os.getcwd() + "\\Images\\" + fi.generateFileName(f_card_name, card_id)
+            
+        except Exception as e:
+            print("Error displaying card image:", str(e))
+            # Display an error message to the user
 
-        image = Image.open(image_path)
-
-        qimage = ImageQt(image)
-        pixmap = QPixmap.fromImage(qimage)
-        image_label = QLabel()
-        image_label.setPixmap(pixmap)
-        image_label.setScaledContents(True)
-        image_label.setFixedSize(560//3, 560//3//2.5*3.5)
-
-        vlayout = QVBoxLayout()
-        vlayout.addWidget(image_label)
-        vlayout.setAlignment(Qt.AlignCenter)
-
-        combo_box = self.retrieve_combo_box(row, col)
-        hlayout = QHBoxLayout()
-        hlayout.addWidget(combo_box)
-        vlayout.addLayout(hlayout)
-
-        print("Added " + f_card_name + " to image layout at position: (" + str(row) + ", " + str(col) + ")")
-        self.remove_item_at_position(row, col)
-        self.gridLayout_5.addLayout(vlayout, row, col, 1, 1)
-        
-        return
-    
-    def retrieve_combo_box(self,row,col):
+    def retrieve_combo_box(self, row, col):
         previous_vlayout = self.gridLayout_5.itemAtPosition(row, col)
         if previous_vlayout is not None:
             previous_hlayout = previous_vlayout.itemAt(1) # Get the QHBoxLayout containing the previous widget
             previous_combo_box = previous_hlayout.itemAt(0).widget() # Get the QComboBox widget from the QHBoxLayout
             return previous_combo_box
-                
-    
+
+    # Recursively delete an item and all sub items from the grid layout
     def remove_item_at_position(self, row, col):
         item = self.gridLayout_5.itemAtPosition(row, col)
         if item is not None:
@@ -389,14 +377,33 @@ class MTGDeckUpdatingTool(QMainWindow):
             if widget is not None:
                 self.gridLayout_5.removeWidget(widget)
                 widget.deleteLater()
-            else:
+            layout = item.layout()
+            if layout is not None:
+                while layout.count():
+                    child = layout.takeAt(0)
+                    if child.widget():
+                        child.widget().deleteLater()
+                    elif child.layout():
+                        self.delete_layout(child.layout())
                 self.gridLayout_5.removeItem(item)
+    
+    # Helper method for deleting items from grid layout            
+    def delete_layout(self, layout):
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+            elif child.layout():
+                self.delete_layout(child.layout())
+        layout.deleteLater()
         
     
-    # Run the save decks function on
+    # Run the save decks function
     def on_button1_clicked(self):
-        print("Saving decks. . .")
-        fd.SaveDecks()
+        confirm = QMessageBox.question(self, 'Save Decks', 'Are you sure you want to save your decks? This action is irreversible.', QMessageBox.Yes | QMessageBox.No)
+        if confirm == QMessageBox.Yes:
+            print("Saving decks. . .")
+            fd.SaveDecks()
 
     def on_button2_clicked(self):
         print("Checking for changes. . .")

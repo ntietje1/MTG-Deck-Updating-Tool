@@ -143,8 +143,8 @@ def CompareDecks(fileName):
     # Create a new dictionary with only the non-zero entries
     diff_dict_no_zeros = {k: v for k, v in diff_dict.items() if v != 0}
     
-    print("Changes made to " + fileName + " found:")
-    print(diff_dict_no_zeros)
+    # print("Changes made to " + fileName + " found:")
+    # print(diff_dict_no_zeros)
     
     return diff_dict_no_zeros
                     
