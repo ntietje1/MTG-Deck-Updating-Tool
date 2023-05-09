@@ -39,7 +39,7 @@ def genPDF(final_printing_selections):
                 
     # Prevent attempting to output a 0 page pdf
     if len(final_printing_selections) == 0:
-        print("No deck additions found! No PDF generated :(")
+        print("No images selected! No PDF generated :(")
         return
     
     # Create a blank pdf

@@ -11,10 +11,10 @@ import GeneratePDF as gp
 
 import os
 
+# TODO: ADD "favoriting" of card printings
 
 class MyQComboBox(QComboBox):
     set_name_id_mapping = {} # (key,value) = (index, set_code)
-    
     def __init__(self, mtg_tool, scrollWidget=None, *args, **kwargs):
         super(MyQComboBox, self).__init__(*args, **kwargs)  
         self.scrollWidget = scrollWidget
@@ -22,6 +22,7 @@ class MyQComboBox(QComboBox):
         self.setFocusPolicy(Qt.StrongFocus)
         self.currentIndexChanged.connect(self.on_combo_box_changed)
         self.user_interacted = False
+        
 
     def wheelEvent(self, event):
         if self.hasFocus():
@@ -57,8 +58,9 @@ class MTGDeckUpdatingTool(QMainWindow):
     def __init__(self):
         super().__init__()
         self.init_ui()
+        self.decks_retrieved = False
         
-        
+       
     def init_ui(self):
         # Create a central widget
         self.central_widget = QWidget(self)
@@ -100,6 +102,38 @@ class MTGDeckUpdatingTool(QMainWindow):
         
         # Add the URL box and button to the vertical layout
         self.verticalLayout.addLayout(self.url_box)
+        
+        # Create vert layout to hold buttons
+        self.button_layout = QHBoxLayout()
+        self.button_layout.setObjectName(u"button_layout_1")
+        
+        # Create four buttons
+        self.button_3 = QPushButton(self)
+        self.button_3.setObjectName(u"button_3")
+        self.button_layout.addWidget(self.button_3)
+        self.button_3.clicked.connect(self.on_button3_clicked)
+        
+        self.button_5 = QPushButton(self)
+        self.button_5.setObjectName(u"button_5")
+        #self.button_layout.addWidget(self.button_5)
+        self.button_5.clicked.connect(self.on_button5_clicked)
+        #self.button_5.hide()
+        
+        self.button_2 = QPushButton(self)
+        self.button_2.setObjectName(u"button_2")
+        self.button_layout.addWidget(self.button_2)
+        self.button_2.clicked.connect(self.on_button2_clicked)
+        self.button_2.hide()
+        
+        self.button_1 = QPushButton(self)
+        self.button_1.setObjectName(u"button_1")
+        self.button_layout.addWidget(self.button_1)
+        self.button_1.clicked.connect(self.on_button1_clicked)
+        
+        self.button_4 = QPushButton(self)
+        self.button_4.setObjectName(u"button_4")
+        #self.button_layout.addWidget(self.button_4)
+        self.button_4.clicked.connect(self.on_button4_clicked)
 
         # Create a horizontal layout for the tab widget and the buttons
         self.horizontalLayout = QHBoxLayout()
@@ -127,6 +161,16 @@ class MTGDeckUpdatingTool(QMainWindow):
         self.list_widget = QListWidget(self.tab_2)
         self.list_widget.setObjectName(u"list_widget")
         list_vbox.addWidget(self.list_widget)
+        self.text_edit = QPlainTextEdit(self.tab_2)
+        self.text_edit.setObjectName("text_edit")
+        self.text_edit.setPlaceholderText("Paste decklist here")
+        newFont = QFont()
+        newFont.setPointSize(12)
+        self.text_edit.setFont(newFont)
+        list_vbox.addWidget(self.text_edit)
+        self.text_edit.hide()
+        #list_vbox.addWidget(self.button_3)
+        list_vbox.addLayout(self.button_layout)
         self.tab_2.setLayout(list_vbox)
         self.tabWidget.addTab(self.tab_2, "")
         
@@ -140,7 +184,7 @@ class MTGDeckUpdatingTool(QMainWindow):
         # Add the image viewing grid layout
         self.grid_vbox = QVBoxLayout(self.tab)
         self.grid_vbox.setObjectName(u"grid_vbox")
-        self.grid_vbox.setContentsMargins(0,0,0,0)
+        #self.grid_vbox.setContentsMargins(0,0,0,0)
 
         # create a widget to hold the scroll area and set its minimum width to 580
         scroll_area_widget = QWidget()
@@ -169,39 +213,17 @@ class MTGDeckUpdatingTool(QMainWindow):
         # add the scroll area to the scroll area widget
         layout = QVBoxLayout(scroll_area_widget)
         layout.addWidget(self.scrollArea)
+        layout.setContentsMargins(0,0,0,0)
+        
+        self.button_layout_2 = QHBoxLayout()
+        self.button_layout_2.addWidget(self.button_5)
+        self.button_layout_2.addWidget(self.button_4)
 
         # add the scroll area widget to the main layout
         self.grid_vbox.addWidget(scroll_area_widget)
+        self.grid_vbox.addLayout(self.button_layout_2)
         self.tabWidget.addTab(self.tab, "")
         self.horizontalLayout.addWidget(self.tabWidget)
-        
-        # Create vert layout to hold buttons
-        self.button_layout = QVBoxLayout()
-        self.button_layout.setObjectName(u"button_layout")
-        
-        # Create four buttons
-        self.button_1 = QPushButton(self)
-        self.button_1.setObjectName(u"button_1")
-        self.button_layout.addWidget(self.button_1)
-        self.button_1.clicked.connect(self.on_button1_clicked)
-        
-        self.button_2 = QPushButton(self)
-        self.button_2.setObjectName(u"button_2")
-        self.button_layout.addWidget(self.button_2)
-        self.button_2.clicked.connect(self.on_button2_clicked)
-        
-        self.button_3 = QPushButton(self)
-        self.button_3.setObjectName(u"button_3")
-        self.button_layout.addWidget(self.button_3)
-        self.button_3.clicked.connect(self.on_button3_clicked)
-        
-        self.button_4 = QPushButton(self)
-        self.button_4.setObjectName(u"button_4")
-        self.button_layout.addWidget(self.button_4)
-        self.button_4.clicked.connect(self.on_button4_clicked)
-
-        # Add the button layout to the gui
-        self.horizontalLayout.addLayout(self.button_layout)
 
         self.verticalLayout.addLayout(self.horizontalLayout)
 
@@ -224,9 +246,10 @@ class MTGDeckUpdatingTool(QMainWindow):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("MTGDeckUpdatingTool", u"Deck Changes", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("MTGDeckUpdatingTool", u"Images", None))
         self.button_1.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Save Decks", None))
-        self.button_2.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Find Changes", None))
+        self.button_2.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Submit Decklist", None))
         self.button_3.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Manual Mode", None))
         self.button_4.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Generate PDF", None))
+        self.button_5.setText(QCoreApplication.translate("MTGDeckUpdatingTool", u"Find Images", None))
     
     # Add two items to the top of the list widget as a header    
     def add_list_header(self):
@@ -287,6 +310,10 @@ class MTGDeckUpdatingTool(QMainWindow):
                     self.list_widget.addItem(newItem)
                     
     def init_images_widget(self):
+        if len(self.card_dict.items()) == 0:
+            print("No images to view!")
+            return
+        
         cards_per_row = 3
         i = 0
         # Iterate over every card that needs to be printed
@@ -400,31 +427,53 @@ class MTGDeckUpdatingTool(QMainWindow):
     
     # Run the save decks function
     def on_button1_clicked(self):
-        confirm = QMessageBox.question(self, 'Save Decks', 'Are you sure you want to save your decks? This action is irreversible.', QMessageBox.Yes | QMessageBox.No)
+        confirm = QMessageBox.question(self, 'Save Decks', 'Are you sure you want to save your decks? \nDo this after generating your pdf', QMessageBox.Yes | QMessageBox.No)
         if confirm == QMessageBox.Yes:
             print("Saving decks. . .")
             fd.SaveDecks()
 
+    # TODO: UNUSED BUTTON
     def on_button2_clicked(self):
         print("Checking for changes. . .")
         self.update_list_widget()
-        self.init_images_widget()
+        self.init_images_widget() 
             
     def on_button3_clicked(self):
-        print("button 3 clicked!")
+        if self.text_edit.isVisible():
+            # Switch from the text edit to the list widget
+            self.text_edit.hide()
+            self.list_widget.show()
+            self.button_3.setText("Switch to Manual Mode")
+        else:
+            # Switch from the list widget to the text edit
+            self.list_widget.hide()
+            self.text_edit.show()
+            self.button_3.setText("Switch to Automatic Mode")
     
     def on_button4_clicked(self):
         print("Generating pdf. . .")
         gp.genPDF(self.final_printing_selections)
+        
+    def on_button5_clicked(self):
+        # Check if deck list has been pasted in
+        if len(self.text_edit.toPlainText()) > 0:
+            print("Manual mode detected. . .")
+            self.card_dict = fd.Text2Dict(self.text_edit.toPlainText())
+            
+        # Populate image viewing widget
+        print("Finding Images. . .")
+        self.init_images_widget()
+        
     
     def on_url_button_clicked(self):
         text = self.url_bar.text()
         if len(text) != 0:
-            print(f"Retrieving decks from {text}...")
+            if self.decks_retrieved is False:
+                print(f"Retrieving decks from {text}...")
+                fd.UpdateCurrentDecks(text)
+                self.decks_retrieved = True
 
-            # Call the UpdateCurrentDecks function in a separate thread to avoid freezing the GUI
-            thread = threading.Thread(target=fd.UpdateCurrentDecks, args=(text,))
-            thread.start()
+            self.update_list_widget()
         
     def enable_disable_button(self):
         # Enable/disable the button based on whether the text box is empty or not

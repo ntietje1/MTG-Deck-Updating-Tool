@@ -8,6 +8,20 @@ import os
 from datetime import datetime
 import shutil
 
+# Convert pasted text into a card dictionary (if possible)
+def Text2Dict(text):
+    card_dict = {}
+    for line in text.splitlines():
+        line = line.strip()
+        if line:
+            match = re.match(r'^(\d+)(?:x )?([^\d]+)', line)
+            if match:
+                quantity = int(match.group(1))
+                name = match.group(2).strip()
+                name = re.sub(r'\s*\b[A-Z]{2,3}\b', '', name)
+                card_dict[name] = quantity
+    return card_dict
+
 # Convert text file into a dictionary with card names as keys and quantity as value
 def MakeCardDict(text_path):
     CardDict = {}
